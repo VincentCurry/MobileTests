@@ -1,0 +1,55 @@
+{
+  "name": "mobile-e2e-tests",
+  "version": "1.0.0",
+  "description": "Mobile E2E tests for Receipts & Rewards apps",
+  "scripts": {
+    "appium": "node scripts/start-appium.js",
+    "test:mobile": "set MOBILE=true&& codeceptjs run --steps --grep @mobile",
+    "test:merchant": "set MOBILE=true&& codeceptjs run --steps --grep @merchant",
+    "debug": "set MOBILE=true&& codeceptjs run --steps --grep @debug",
+    "lint": "eslint . --ext .ts",
+    "lint:fix": "eslint . --ext .ts --fix",
+    "typecheck": "tsc --noEmit",
+    "clean": "node scripts/clean-reports.js",
+    "report:generate": "allure generate output/allure-results --clean -o output/allure-report",
+    "report:open": "allure open output/allure-report",
+    "report": "npm run report:generate && npm run report:open"
+  },
+  "keywords": [
+    "appium",
+    "mobile",
+    "android",
+    "automation",
+    "testing",
+    "e2e",
+    "codeceptjs",
+    "bdd"
+  ],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@codeceptjs/configure": "^0.10.0",
+    "@codeceptjs/ui": "^0.4.7",
+    "@playwright/test": "^1.40.0",
+    "@types/node": "^20.10.0",
+    "@types/sharp": "^0.32.0",
+    "@typescript-eslint/eslint-plugin": "^8.47.0",
+    "@typescript-eslint/parser": "^8.47.0",
+    "allure-codeceptjs": "^2.15.0",
+    "allure-commandline": "^2.25.0",
+    "codeceptjs": "^3.5.0",
+    "eslint": "^9.39.1",
+    "eslint-plugin-check-file": "^3.3.1",
+    "husky": "^9.1.7",
+    "playwright": "^1.40.0",
+    "sharp": "^0.34.5",
+    "ts-node": "^10.9.0",
+    "typescript": "^5.3.0",
+    "webdriverio": "^9.21.0"
+  },
+  "dependencies": {
+    "dotenv": "^17.2.3",
+    "jsqr": "^1.4.0",
+    "tesseract.js": "^6.0.1"
+  }
+}

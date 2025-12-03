@@ -1,0 +1,7 @@
+{
+  "recommendations": [
+    "alexkrechik.cucumberautocomplete",
+    "ms-vscode.vscode-typescript-next",
+    "dbaeumer.vscode-eslint"
+  ]
+}

@@ -1,0 +1,11 @@
+# Place your mobile app files here:
+# - Android: .apk files
+# - iOS: .ipa files (real devices) or .app folders (simulators)
+#
+# Example structure:
+# apps/
+#   android/
+#     receipts-rewards.apk
+#   ios/
+#     receipts-rewards.ipa
+#     receipts-rewards.app/  (for simulators)
