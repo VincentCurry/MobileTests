@@ -18,6 +18,7 @@
   "include": [
     "step_definitions/**/*.ts",
     "pageObjects/**/*.ts",
+    "tools/**/*.ts",
     "pages/**/*.ts",
     "locators/**/*.ts",
     "helpers/**/*.ts",

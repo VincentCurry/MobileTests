@@ -1,80 +1,87 @@
-import { setHeadlessWhen, setWindowSize } from '@codeceptjs/configure';
 import * as dotenv from 'dotenv';
+import { SupportedPlatform } from './config/capabilities/types';
+import { getAndroidCapabilities } from './config/capabilities/android.capabilities';
+import { getIOSCapabilities } from './config/capabilities/ios.capabilities';
 
-// Load environment variables from .env file
 dotenv.config();
 
-// turn on headless mode when running with HEADLESS=true environment variable
-// export HEADLESS=true && npx codeceptjs run
-setHeadlessWhen(process.env.HEADLESS);
+// Platform: Set PLATFORM=android or PLATFORM=ios in .env
+const platform: SupportedPlatform = (process.env.PLATFORM as SupportedPlatform) || 'android';
 
-// set window size for web testing
-setWindowSize(1920, 1080);
+// Cloud testing options:
+// - BrowserStack: Available as example in capabilities files (set BROWSERSTACK=true)
+const useBrowserStack = false;
 
-const isMobile = process.env.MOBILE === 'true';
+// Device configuration - all values should be set in .env file
+// Required: DEVICE_UDID, DEVICE_NAME
+// Optional: PLATFORM_VERSION, DEVICE_MANUFACTURER
+if (!process.env.DEVICE_UDID) {
+  console.log('WARNING: DEVICE_UDID not set in .env - run "adb devices" to get your device UDID');
+}
+if (!process.env.DEVICE_NAME) {
+  console.log('WARNING: DEVICE_NAME not set in .env - run "adb shell getprop ro.product.model" to get device name');
+}
 
-const platform = process.env.PLATFORM || 'android';
-
-const androidCapabilities = {
-  platformName: 'Android',
-  'appium:automationName': 'UiAutomator2',
-  'appium:deviceName': process.env.DEVICE_NAME || 'Android Device',
-  'appium:udid': process.env.DEVICE_UDID || '',
-  'appium:appPackage': 'com.receiptsandrewards.merchant.dev',
-  'appium:noReset': true,
-  'appium:autoLaunch': false,
-  'appium:disableWindowAnimation': true,
-  'appium:autoGrantPermissions': true,
-  'appium:autoAcceptAlerts': true
+const device = {
+  udid: process.env.DEVICE_UDID || '',
+  deviceName: process.env.DEVICE_NAME || '',
+  platformName: platform,
+  platformVersion: process.env.PLATFORM_VERSION || '',
+  manufacturer: process.env.DEVICE_MANUFACTURER || ''
 };
 
-const iosCapabilities = {
-  platformName: 'iOS',
-  'appium:automationName': 'XCUITest',
-  'appium:deviceName': process.env.DEVICE_NAME || 'iPhone',
-  'appium:udid': process.env.DEVICE_UDID || '',
-  'appium:bundleId': 'com.receiptsandrewards.merchant.dev',
-  'appium:noReset': true,
-  'appium:autoLaunch': false,
-  'appium:autoAcceptAlerts': true
-};
+const appPackage = 'com.receiptsandrewards.merchant.dev';
+const appPath = ''; // Not using app path - app already installed
 
-const appiumHelper = {
-  Appium: {
-    host: '127.0.0.1',
-    port: 4723,
-    path: '/wd/hub',
-    platform: platform === 'ios' ? 'iOS' : 'Android',
-    device: process.env.DEVICE_NAME || 'Android Device',
-    desiredCapabilities: platform === 'ios' ? iosCapabilities : androidCapabilities
+function getCapabilities() {
+  if (platform === 'ios') {
+    const caps = getIOSCapabilities(device, appPath, { useBrowserStack });
+    return {
+      platformName: 'iOS',
+      'appium:automationName': caps.capabilities.automationName,
+      'appium:deviceName': device.deviceName,
+      'appium:udid': device.udid,
+      'appium:bundleId': appPackage,
+      'appium:noReset': caps.capabilities.noReset,
+      'appium:autoLaunch': caps.capabilities.autoLaunch,
+      'appium:newCommandTimeout': caps.capabilities.newCommandTimeout,
+      'appium:useNewWDA': caps.capabilities.useNewWDA,
+      'appium:wdaStartupRetries': caps.capabilities.wdaStartupRetries,
+      'appium:usePrebuiltWDA': caps.capabilities.usePrebuiltWDA,
+      'appium:wdaLocalPort': caps.capabilities.wdaLocalPort
+    };
+  } else {
+    const caps = getAndroidCapabilities(device, appPath, appPackage, undefined, { useBrowserStack });
+    return {
+      platformName: 'Android',
+      'appium:automationName': caps.capabilities.automationName,
+      'appium:deviceName': device.deviceName,
+      'appium:udid': device.udid,
+      'appium:appPackage': appPackage,
+      'appium:noReset': caps.capabilities.noReset,
+      'appium:autoLaunch': caps.capabilities.autoLaunch,
+      'appium:autoGrantPermissions': caps.capabilities.autoGrantPermissions,
+      'appium:newCommandTimeout': caps.capabilities.newCommandTimeout,
+      'appium:adbExecTimeout': caps.capabilities.adbExecTimeout,
+      'appium:skipDeviceInitialization': caps.capabilities.skipDeviceInitialization,
+      'appium:skipServerInstallation': caps.capabilities.skipServerInstallation,
+      'appium:dontStopAppOnReset': caps.capabilities.dontStopAppOnReset
+    };
   }
-};
-
-const playwrightHelper = {
-  Playwright: {
-    url: process.env.BASE_URL,
-    show: true,
-    browser: 'chromium',
-    windowSize: '1920x1080',
-    waitForTimeout: 10000,
-    waitForAction: 1000,
-    timeout: 30000,
-    video: './output/videos/',
-    keepVideoForPassedTests: true,
-    chromium: {
-      args: ['--disable-blink-features=AutomationControlled']
-    },
-    contextOptions: {
-      acceptDownloads: true
-    }
-  }
-};
+}
 
 export const config = {
   tests: './features/**/*.feature',
   output: './output',
   helpers: {
-    ...(isMobile ? appiumHelper : playwrightHelper),
+    Appium: {
+      host: useBrowserStack ? 'hub-cloud.browserstack.com' : '127.0.0.1',
+      port: useBrowserStack ? 80 : 4723,
+      path: '/wd/hub',
+      platform: platform === 'ios' ? 'iOS' : 'Android',
+      device: device.deviceName,
+      desiredCapabilities: getCapabilities()
+    },
     FileSystem: {}
   },
   gherkin: {
@@ -83,34 +90,16 @@ export const config = {
       './pageObjects/merchantPO/merchant.steps.ts'
     ]
   },
-  include: {
-    // Generic Helpers
-    waitHelper: './tests/helpers/WaitHelper.ts',
-    clickHelper: './tests/helpers/ClickHelper.ts',
-    assertionHelper: './tests/helpers/AssertionHelper.ts',
-    navigationHelper: './tests/helpers/NavigationHelper.ts',
-    elementHelper: './tests/helpers/ElementHelper.ts',
-    searchHelper: './tests/helpers/SearchHelper.ts',
-    downloadHelper: './tests/helpers/DownloadHelper.ts'
-  },
   plugins: {
     screenshotOnFail: {
-      enabled: true
-    },
-    retryFailedStep: {
-      enabled: false
-    },
-    tryTo: {
       enabled: true
     },
     allure: {
       enabled: true,
       require: 'allure-codeceptjs',
-      outputDir: './output/allure-results',
-      enableScreenshotDiffPlugin: false,
+      outputDir: './output/allure-results'
     }
   },
   require: ['ts-node/register'],
-  name: 'wallpaper-portal-tests',
-  translation: 'en-US'
+  name: 'mobile-e2e-tests'
 };

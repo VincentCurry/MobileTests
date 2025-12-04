@@ -1,0 +1,15 @@
+node_modules/
+test-results/
+playwright-report/
+playwright/.cache/
+downloads/
+output/
+*.log
+.DS_Store
+.env
+!.env.example
+task.txt
+WIP.md
+package-lock.json
+example_frameworks/
+*.apk
