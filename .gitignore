@@ -13,3 +13,8 @@ WIP.md
 package-lock.json
 example_frameworks/
 *.apk
+java.pkg
+node.pkg
+openjdk.tar.gz
+setup_android_log.txt
+*.txt

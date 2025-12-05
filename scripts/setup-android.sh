@@ -1,15 +1,14 @@
 #!/bin/bash
 
-# Mobile Testing Framework Setup for macOS
-# Based on native-mobile-e2e framework setup
+# Android Testing Framework Setup for macOS
+# Uses direct downloads for fast installation (no Homebrew compilation)
 
-LOGFILE="setup_log.txt"
+LOGFILE="setup_android_log.txt"
 ANDROID_SDK="$HOME/Library/Android/sdk"
-PLATFORM_TOOLS_URL="https://dl.google.com/android/repository/platform-tools-latest-darwin.zip"
 PROFILE_FILE=~/.zshrc
 
-echo "=== Mobile Testing Framework Setup (macOS) ===" | tee $LOGFILE
-echo ""
+echo "=== Android Testing Framework Setup (macOS) ===" | tee $LOGFILE
+echo "" | tee -a $LOGFILE
 
 # Ensure profile file exists
 touch $PROFILE_FILE
@@ -25,84 +24,61 @@ add_to_profile() {
 }
 
 # ============================================
-# Step 1: Check/Install Homebrew
+# Step 1: Check/Install Node.js (direct download)
 # ============================================
-echo "Step 1: Checking Homebrew..." | tee -a $LOGFILE
-if ! command -v brew > /dev/null; then
-    echo "  Installing Homebrew..." | tee -a $LOGFILE
-    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-else
-    echo "  [OK] Homebrew found" | tee -a $LOGFILE
-fi
-
-# ============================================
-# Step 2: Check/Install Node.js
-# ============================================
-echo "Step 2: Checking Node.js..." | tee -a $LOGFILE
-if ! command -v node > /dev/null; then
-    echo "  Installing Node.js..." | tee -a $LOGFILE
-    brew install node
-else
+echo "Step 1: Checking Node.js..." | tee -a $LOGFILE
+if command -v node > /dev/null 2>&1; then
     NODE_VER=$(node -v)
     echo "  [OK] Node.js $NODE_VER found" | tee -a $LOGFILE
-fi
-
-# ============================================
-# Step 3: Check/Install Java
-# ============================================
-echo "Step 3: Checking Java..." | tee -a $LOGFILE
-if ! command -v java &> /dev/null; then
-    echo "  Java not found. Installing OpenJDK 17..." | tee -a $LOGFILE
-    brew install openjdk@17
-    
-    # Detect architecture and set correct path
-    if [[ $(uname -m) == "arm64" ]]; then
-        # Apple Silicon (M1/M2/M3)
-        JAVA_PATH="/opt/homebrew/opt/openjdk@17/bin"
-    else
-        # Intel Mac
-        JAVA_PATH="/usr/local/opt/openjdk@17/bin"
-    fi
-    
-    add_to_profile "export PATH=\"$JAVA_PATH:\$PATH\""
-    export PATH="$JAVA_PATH:$PATH"
-    echo "  [OK] OpenJDK 17 installed" | tee -a $LOGFILE
 else
-    JAVA_VER=$(java -version 2>&1 | head -1 | cut -d'"' -f2)
-    JAVA_MAJOR=$(echo "$JAVA_VER" | cut -d'.' -f1)
-    
-    # Handle old version format (1.8.x)
-    if [[ "$JAVA_MAJOR" == "1" ]]; then
-        JAVA_MAJOR=$(echo "$JAVA_VER" | cut -d'.' -f2)
-    fi
-    
-    if [[ "$JAVA_MAJOR" -ge 11 ]]; then
-        echo "  [OK] Java $JAVA_VER found" | tee -a $LOGFILE
-    else
-        echo "  [WARN] Java $JAVA_VER found, but Java 11+ required for Appium" | tee -a $LOGFILE
-        echo "  To upgrade, run:" | tee -a $LOGFILE
-        echo "    brew install openjdk@17" | tee -a $LOGFILE
-        echo "  After install, close and reopen your terminal/IDE!" | tee -a $LOGFILE
-    fi
+    echo "  Installing Node.js (direct download)..." | tee -a $LOGFILE
+    curl -sL -o /tmp/node.pkg "https://nodejs.org/dist/v20.18.0/node-v20.18.0.pkg"
+    sudo installer -pkg /tmp/node.pkg -target /
+    rm -f /tmp/node.pkg
+    echo "  [OK] Node.js installed" | tee -a $LOGFILE
 fi
 
-# Set JAVA_HOME
-add_to_profile 'export JAVA_HOME=$(/usr/libexec/java_home)'
+# ============================================
+# Step 2: Check/Install Java (direct download)
+# ============================================
+echo "Step 2: Checking Java..." | tee -a $LOGFILE
+
+JAVA_CHECK=$(java -version 2>&1)
+if echo "$JAVA_CHECK" | grep -q "version"; then
+    JAVA_VER=$(echo "$JAVA_CHECK" | head -1 | cut -d'"' -f2 2>/dev/null || echo "unknown")
+    echo "  [OK] Java $JAVA_VER found" | tee -a $LOGFILE
+else
+    echo "  Installing OpenJDK 17 (direct download)..." | tee -a $LOGFILE
+    
+    # Detect architecture
+    if [[ $(uname -m) == "arm64" ]]; then
+        JAVA_URL="https://github.com/adoptium/temurin17-binaries/releases/download/jdk-17.0.9%2B9/OpenJDK17U-jdk_aarch64_mac_hotspot_17.0.9_9.pkg"
+    else
+        JAVA_URL="https://github.com/adoptium/temurin17-binaries/releases/download/jdk-17.0.9%2B9/OpenJDK17U-jdk_x64_mac_hotspot_17.0.9_9.pkg"
+    fi
+    
+    curl -sL -o /tmp/java.pkg "$JAVA_URL"
+    sudo installer -pkg /tmp/java.pkg -target /
+    rm -f /tmp/java.pkg
+    
+    # Set JAVA_HOME
+    add_to_profile 'export JAVA_HOME=$(/usr/libexec/java_home)'
+    export JAVA_HOME=$(/usr/libexec/java_home)
+    
+    echo "  [OK] OpenJDK 17 installed" | tee -a $LOGFILE
+fi
 
 # ============================================
-# Step 4: Install Android Platform Tools
+# Step 3: Install Android Platform Tools
 # ============================================
-echo "Step 4: Checking Android SDK..." | tee -a $LOGFILE
+echo "Step 3: Checking Android SDK..." | tee -a $LOGFILE
 if [ -f "$ANDROID_SDK/platform-tools/adb" ]; then
     echo "  [OK] Android SDK found at $ANDROID_SDK" | tee -a $LOGFILE
 else
-    echo "  Installing Android Platform Tools..." | tee -a $LOGFILE
+    echo "  Installing Android Platform Tools (direct download)..." | tee -a $LOGFILE
     mkdir -p "$ANDROID_SDK"
     
-    echo "  Downloading (~15MB)..." | tee -a $LOGFILE
-    curl -L "$PLATFORM_TOOLS_URL" -o /tmp/platform-tools.zip --progress-bar
-    
-    echo "  Extracting..." | tee -a $LOGFILE
+    curl -sL -o /tmp/platform-tools.zip "https://dl.google.com/android/repository/platform-tools-latest-darwin.zip"
     unzip -q /tmp/platform-tools.zip -d "$ANDROID_SDK"
     rm -f /tmp/platform-tools.zip
     
@@ -114,54 +90,84 @@ add_to_profile "export ANDROID_HOME=$ANDROID_SDK"
 add_to_profile 'export PATH=$ANDROID_HOME/platform-tools:$PATH'
 
 # ============================================
-# Step 5: Install Appium + Drivers
+# Step 4: Install Appium + Drivers
 # ============================================
-echo "Step 5: Checking Appium..." | tee -a $LOGFILE
-if ! command -v appium > /dev/null; then
-    echo "  Installing Appium..." | tee -a $LOGFILE
-    npm install -g appium
-else
+echo "Step 4: Checking Appium..." | tee -a $LOGFILE
+if command -v appium > /dev/null 2>&1; then
     APPIUM_VER=$(appium -v)
     echo "  [OK] Appium $APPIUM_VER found" | tee -a $LOGFILE
+else
+    echo "  Installing Appium 2.11.3..." | tee -a $LOGFILE
+    sudo npm install -g appium@2.11.3 || { echo "  Failed to install Appium." | tee -a $LOGFILE; exit 1; }
+    echo "  [OK] Appium installed" | tee -a $LOGFILE
 fi
+
+echo "  Installing Appium Doctor..." | tee -a $LOGFILE
+sudo npm install -g appium-doctor || echo "  Failed to install Appium Doctor, continuing..." | tee -a $LOGFILE
+
+echo "  Fixing npm cache permissions..." | tee -a $LOGFILE
+sudo chown -R $(whoami) ~/.npm 2>/dev/null || true
 
 echo "  Installing UiAutomator2 driver..." | tee -a $LOGFILE
-appium driver install uiautomator2 2>/dev/null || echo "  UiAutomator2 already installed" | tee -a $LOGFILE
+appium driver install uiautomator2@3.7.7 || echo "  UiAutomator2 already installed or failed" | tee -a $LOGFILE
 
 # ============================================
-# Step 6: Install Xcode Command Line Tools (for iOS)
+# Step 5: Update Environment Variables
 # ============================================
-echo "Step 6: Checking Xcode CLI tools..." | tee -a $LOGFILE
-if ! xcode-select -p > /dev/null 2>&1; then
-    echo "  Installing Xcode command line tools..." | tee -a $LOGFILE
-    xcode-select --install
-else
-    echo "  [OK] Xcode CLI tools found" | tee -a $LOGFILE
-fi
+echo "Step 5: Updating environment variables..." | tee -a $LOGFILE
+add_to_profile 'export ANDROID_HOME=~/Library/Android/sdk'
+add_to_profile 'export JAVA_HOME=$(/usr/libexec/java_home)'
+add_to_profile 'export PATH=$ANDROID_HOME/platform-tools:$PATH'
+add_to_profile 'export PATH=$ANDROID_HOME/tools:$PATH'
+add_to_profile 'export PATH=$JAVA_HOME/bin:$PATH'
+
+# Source the profile to apply changes
+echo "  Sourcing profile..." | tee -a $LOGFILE
+source $PROFILE_FILE 2>/dev/null || true
 
 # ============================================
-# Step 7: Verification
+# Step 6: Verification
 # ============================================
 echo "" | tee -a $LOGFILE
 echo "=== Verification ===" | tee -a $LOGFILE
-echo "ADB:" | tee -a $LOGFILE
-"$ANDROID_SDK/platform-tools/adb" version 2>/dev/null || echo "  [WARN] ADB not found - restart terminal" | tee -a $LOGFILE
+
+echo "Node.js:" | tee -a $LOGFILE
+node -v 2>/dev/null || echo "  [WARN] Node.js not found - restart terminal" | tee -a $LOGFILE
 
 echo "" | tee -a $LOGFILE
 echo "Java:" | tee -a $LOGFILE
 java -version 2>&1 | head -1 | tee -a $LOGFILE
 
 echo "" | tee -a $LOGFILE
+echo "ADB:" | tee -a $LOGFILE
+"$ANDROID_SDK/platform-tools/adb" version 2>/dev/null || echo "  [WARN] ADB not found - restart terminal" | tee -a $LOGFILE
+
+echo "" | tee -a $LOGFILE
 echo "Appium:" | tee -a $LOGFILE
 appium -v 2>/dev/null || echo "  [WARN] Appium not found - restart terminal" | tee -a $LOGFILE
+
+echo "" | tee -a $LOGFILE
+echo "Appium Drivers:" | tee -a $LOGFILE
+appium driver list --installed 2>/dev/null || echo "  [WARN] Could not list Appium drivers" | tee -a $LOGFILE
+
+echo "" | tee -a $LOGFILE
+echo "Appium Doctor (Android):" | tee -a $LOGFILE
+if command -v appium-doctor > /dev/null 2>&1; then
+    appium-doctor --android || echo "  Appium Doctor reported issues, please check above." | tee -a $LOGFILE
+else
+    echo "  [WARN] Appium Doctor not found" | tee -a $LOGFILE
+fi
 
 # ============================================
 # Summary
 # ============================================
 echo "" | tee -a $LOGFILE
-echo "=== Setup Complete ===" | tee -a $LOGFILE
+echo "=== Android Setup Complete ===" | tee -a $LOGFILE
 echo "ANDROID_HOME = $ANDROID_SDK" | tee -a $LOGFILE
 echo "JAVA_HOME = \$(/usr/libexec/java_home)" | tee -a $LOGFILE
 echo "" | tee -a $LOGFILE
 echo "IMPORTANT: Run 'source ~/.zshrc' or restart terminal!" | tee -a $LOGFILE
-echo "Then run: npm run appium" | tee -a $LOGFILE
+echo "" | tee -a $LOGFILE
+echo "For iOS testing, run: ./scripts/setup-ios.sh" | tee -a $LOGFILE
+echo "" | tee -a $LOGFILE
+echo "Then run: npm install && npm run appium" | tee -a $LOGFILE
