@@ -37,7 +37,7 @@ export const APP_CONFIG: Record<string, AppPlatformConfig> = {
     },
     ios: {
       packageIdentifier: 'com.receiptsandrewards.dev',
-      packageName: 'receipts-rewards.ipa'
+      packageName: 'Receipts_and_Rewards_debug.ipa'
     }
   },
   'merchant': {

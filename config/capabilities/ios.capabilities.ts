@@ -1,6 +1,6 @@
 import { AppiumCapabilities, Device } from './types';
 
-let wdaLocalPort = 8100;
+const wdaLocalPort = 8100;
 
 /**
  * Default iOS capabilities for Appium testing
@@ -44,7 +44,7 @@ export function getIOSCapabilities(
       wdaStartupRetries: 4,
       usePrebuiltWDA: true,
       derivedDataPath: derivedDataPath,
-      wdaLocalPort: wdaLocalPort++
+      wdaLocalPort: wdaLocalPort
     }
   };
 

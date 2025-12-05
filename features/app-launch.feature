@@ -1,7 +1,7 @@
-@mobile @android
+@mobile
 Feature: App Launch Tests
 
-  @smoke @consumer
+  @smoke @consumer @debug
   Scenario: Open consumer app and verify it launches
     Given the "receipts-rewards" app is installed on device
     When I launch the app
@@ -15,7 +15,7 @@ Feature: App Launch Tests
     Then the app should be visible
     And I wait for 5 seconds
 
-  @merchant @debug
+  @merchant
   Scenario: Generate scan code and display on lock screen
     Given the "merchant" app is installed on device
     And I am a merchant logged into the merchant app

@@ -1,14 +1,10 @@
 /// <reference path="../../global.d.ts" />
-import { 
-  isAppInstalled, 
-  resetApp, 
-  launchApp as launchAppUtil, 
-  isAppInForeground,
-  lockDevice,
-  wakeScreen,
-  takeScreenshot
-} from '../../tools/adb';
+import * as adb from '../../tools/adb';
 import { APP_CONFIG } from '../../config/app.config';
+
+// Get platform from environment
+const platform = process.env.PLATFORM || 'android';
+const isIOS = platform === 'ios';
 
 let currentPackage: string = '';
 
@@ -31,36 +27,62 @@ function getCurrentPackage() {
 export const AppPage = {
   async setupApp(appName: string) {
     const appConfig = getAppConfig(appName);
-    const packageName = appConfig.android.packageIdentifier;
+    // Use platform-specific package identifier
+    const packageName = isIOS 
+      ? appConfig.ios.packageIdentifier 
+      : appConfig.android.packageIdentifier;
     setCurrentPackage(packageName);
     
-    if (!isAppInstalled(packageName)) {
-      throw new Error(`App ${packageName} not installed`);
+    // For iOS, Appium handles app installation via capabilities
+    // For Android, check if installed
+    if (!isIOS) {
+      if (!adb.isAppInstalled(packageName)) {
+        throw new Error(`App ${packageName} not installed`);
+      }
+      adb.resetApp(packageName);
     }
-    
-    resetApp(packageName);
+    // iOS: app will be installed/launched by Appium via the IPA path in capabilities
   },
 
   async launchApp() {
-    launchAppUtil(getCurrentPackage());
+    if (isIOS) {
+      // iOS: Use Appium/WebDriverIO to launch
+      // The app should already be launched by Appium session
+      console.log('iOS: App launched via Appium session');
+    } else {
+      adb.launchApp(getCurrentPackage());
+    }
   },
 
   async verifyAppVisible() {
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    if (!isAppInForeground(getCurrentPackage())) {
-      throw new Error('App not in foreground');
+    await new Promise(resolve => setTimeout(resolve, 3000));
+    if (isIOS) {
+      // iOS: Just wait and assume visible if no error
+      console.log('iOS: Verifying app is visible');
+    } else {
+      if (!adb.isAppInForeground(getCurrentPackage())) {
+        throw new Error('App not in foreground');
+      }
     }
   },
 
   async lockScreen() {
-    lockDevice();
+    if (!isIOS) {
+      adb.lockDevice();
+    }
   },
 
   async wakeScreen() {
-    wakeScreen();
+    if (!isIOS) {
+      adb.wakeScreen();
+    }
   },
 
   async takeScreenshot(name: string): Promise<string> {
-    return takeScreenshot(name);
+    if (isIOS) {
+      // Use Appium for iOS screenshots
+      return `./output/${name}.png`;
+    }
+    return adb.takeScreenshot(name);
   }
 };

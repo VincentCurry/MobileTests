@@ -1,7 +1,11 @@
 import { execSync } from 'child_process';
 
+// Use platform-appropriate path separator
+const isWindows = process.platform === 'win32';
 const ADB = process.env.ANDROID_HOME 
-  ? `${process.env.ANDROID_HOME}\\platform-tools\\adb.exe`
+  ? (isWindows 
+      ? `${process.env.ANDROID_HOME}\\platform-tools\\adb.exe`
+      : `${process.env.ANDROID_HOME}/platform-tools/adb`)
   : 'adb';
 
 export function isAppInstalled(packageName: string): boolean {

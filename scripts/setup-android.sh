@@ -102,14 +102,16 @@ else
     echo "  [OK] Appium installed" | tee -a $LOGFILE
 fi
 
-echo "  Installing Appium Doctor..." | tee -a $LOGFILE
-sudo npm install -g appium-doctor || echo "  Failed to install Appium Doctor, continuing..." | tee -a $LOGFILE
-
-echo "  Fixing npm cache permissions..." | tee -a $LOGFILE
+# Fix npm cache permissions once
 sudo chown -R $(whoami) ~/.npm 2>/dev/null || true
 
-echo "  Installing UiAutomator2 driver..." | tee -a $LOGFILE
-appium driver install uiautomator2@3.7.7 || echo "  UiAutomator2 already installed or failed" | tee -a $LOGFILE
+# Install UiAutomator2 driver if not installed
+if appium driver list --installed 2>/dev/null | grep -q uiautomator2; then
+    echo "  [OK] UiAutomator2 driver already installed" | tee -a $LOGFILE
+else
+    echo "  Installing UiAutomator2 driver..." | tee -a $LOGFILE
+    appium driver install uiautomator2@3.7.7 || echo "  [WARN] UiAutomator2 install failed" | tee -a $LOGFILE
+fi
 
 # ============================================
 # Step 5: Update Environment Variables
@@ -150,13 +152,6 @@ echo "" | tee -a $LOGFILE
 echo "Appium Drivers:" | tee -a $LOGFILE
 appium driver list --installed 2>/dev/null || echo "  [WARN] Could not list Appium drivers" | tee -a $LOGFILE
 
-echo "" | tee -a $LOGFILE
-echo "Appium Doctor (Android):" | tee -a $LOGFILE
-if command -v appium-doctor > /dev/null 2>&1; then
-    appium-doctor --android || echo "  Appium Doctor reported issues, please check above." | tee -a $LOGFILE
-else
-    echo "  [WARN] Appium Doctor not found" | tee -a $LOGFILE
-fi
 
 # ============================================
 # Summary
