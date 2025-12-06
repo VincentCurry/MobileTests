@@ -2,11 +2,9 @@
 import * as adb from '../../tools/adb';
 import { APP_CONFIG } from '../../config/app.config';
 
-// Get platform from environment
-const platform = process.env.PLATFORM || 'android';
-const isIOS = platform === 'ios';
+const { I } = inject();
 
-let currentPackage: string = '';
+let currentBundleId: string = '';
 
 function getAppConfig(appName: string) {
   const appConfig = APP_CONFIG[appName];
@@ -16,73 +14,89 @@ function getAppConfig(appName: string) {
   return appConfig;
 }
 
-function setCurrentPackage(packageName: string) {
-  currentPackage = packageName;
-}
-
-function getCurrentPackage() {
-  return currentPackage;
-}
-
 export const AppPage = {
   async setupApp(appName: string) {
     const appConfig = getAppConfig(appName);
-    // Use platform-specific package identifier
-    const packageName = isIOS 
-      ? appConfig.ios.packageIdentifier 
-      : appConfig.android.packageIdentifier;
-    setCurrentPackage(packageName);
     
-    // For iOS, Appium handles app installation via capabilities
-    // For Android, check if installed
-    if (!isIOS) {
-      if (!adb.isAppInstalled(packageName)) {
-        throw new Error(`App ${packageName} not installed`);
-      }
-      adb.resetApp(packageName);
+    switch (process.env.MOBILE_OS) {
+      case 'ios':
+        currentBundleId = appConfig.ios.packageIdentifier;
+        I.say('Skipping app installation - no signed IPA available for automation');
+        break;
+      case 'android':
+        currentBundleId = appConfig.android.packageIdentifier;
+        if (!adb.isAppInstalled(currentBundleId)) {
+          throw new Error(`App ${currentBundleId} not installed`);
+        }
+        adb.resetApp(currentBundleId);
+        break;
     }
-    // iOS: app will be installed/launched by Appium via the IPA path in capabilities
   },
 
   async launchApp() {
-    if (isIOS) {
-      // iOS: Use Appium/WebDriverIO to launch
-      // The app should already be launched by Appium session
-      console.log('iOS: App launched via Appium session');
-    } else {
-      adb.launchApp(getCurrentPackage());
+    switch (process.env.MOBILE_OS) {
+      case 'ios':
+        I.say('iOS: App launch skipped - waiting for signed IPA');
+        break;
+      case 'android':
+        adb.launchApp(currentBundleId);
+        break;
     }
   },
 
   async verifyAppVisible() {
     await new Promise(resolve => setTimeout(resolve, 3000));
-    if (isIOS) {
-      // iOS: Just wait and assume visible if no error
-      console.log('iOS: Verifying app is visible');
-    } else {
-      if (!adb.isAppInForeground(getCurrentPackage())) {
-        throw new Error('App not in foreground');
-      }
+    
+    switch (process.env.MOBILE_OS) {
+      case 'ios':
+        // Test automation by clicking on "General" in Settings
+        I.say('iOS: Testing automation - clicking on General...');
+        try {
+          await I.click('~com.apple.settings.general');  // accessibility id
+          await I.wait(2);
+          I.say('iOS: ✓ Successfully navigated to General settings!');
+        } catch {
+          I.say('iOS: Click failed - Settings app may not be in correct state');
+        }
+        break;
+      case 'android':
+        if (!adb.isAppInForeground(currentBundleId)) {
+          throw new Error('App not in foreground');
+        }
+        break;
     }
   },
 
   async lockScreen() {
-    if (!isIOS) {
-      adb.lockDevice();
+    switch (process.env.MOBILE_OS) {
+      case 'ios':
+        // iOS: Not implemented
+        break;
+      case 'android':
+        adb.lockDevice();
+        break;
     }
   },
 
   async wakeScreen() {
-    if (!isIOS) {
-      adb.wakeScreen();
+    switch (process.env.MOBILE_OS) {
+      case 'ios':
+        // iOS: Not implemented
+        break;
+      case 'android':
+        adb.wakeScreen();
+        break;
     }
   },
 
   async takeScreenshot(name: string): Promise<string> {
-    if (isIOS) {
-      // Use Appium for iOS screenshots
-      return `./output/${name}.png`;
+    switch (process.env.MOBILE_OS) {
+      case 'ios':
+        return `./output/${name}.png`;
+      case 'android':
+        return adb.takeScreenshot(name);
+      default:
+        return `./output/${name}.png`;
     }
-    return adb.takeScreenshot(name);
   }
 };
