@@ -37,17 +37,10 @@ function getIOSCapabilities() {
     process.exit(1);
   }
 
-  // Skip app install - no signed IPA available yet
-  // When IOS_BUNDLE_ID is set, will launch that app
-  // When IOS_APP is set and signed, will install and launch
-  // Otherwise, just starts WDA without launching an app
-  console.log('iOS: Skipping app installation (no signed IPA available)');
-  
-  return {
+  const caps: Record<string, unknown> = {
     platformName: 'iOS',
     'appium:automationName': 'XCUITest',
     'appium:udid': detectedDevice.udid,
-    'appium:bundleId': 'com.apple.Preferences', // Settings app for testing
     'appium:xcodeOrgId': process.env.XCODE_ORG_ID,
     'appium:xcodeSigningId': 'Apple Development',
     'appium:usePrebuiltWDA': true,
@@ -55,6 +48,20 @@ function getIOSCapabilities() {
     'appium:noReset': true,
     'appium:wdaStartupRetries': 0
   };
+
+  // Use IPA if available, otherwise use bundle ID or Settings app
+  if (process.env.IOS_APP) {
+    console.log(`iOS: Installing app from ${process.env.IOS_APP}`);
+    caps['appium:app'] = process.env.IOS_APP;
+  } else if (process.env.IOS_BUNDLE_ID) {
+    console.log(`iOS: Launching existing app ${process.env.IOS_BUNDLE_ID}`);
+    caps['appium:bundleId'] = process.env.IOS_BUNDLE_ID;
+  } else {
+    console.log('iOS: No app configured, using Settings app');
+    caps['appium:bundleId'] = 'com.apple.Preferences';
+  }
+
+  return caps;
 }
 
 function getAndroidCapabilities() {

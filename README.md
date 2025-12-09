@@ -294,4 +294,9 @@ Click "Always Allow" for each prompt during build
 Normal - WDA build takes 20-60 seconds on first run
 
 ## Documentation
-- [Step Guidelines](./STEP_GUIDELINES.md)
+
+| File | Description |
+|------|-------------|
+| [Step Guidelines](./STEP_GUIDELINES.md) | BDD/Gherkin step writing rules and patterns |
+| [Mobile Setup](./docs/MOBILE_SETUP.md) | Appium Inspector setup and device connection |
+| [iOS WDA Concerns](./docs/IOS_WDA_CONCERNS.md) | iOS signing, trust requirements, and CI/CD options |
