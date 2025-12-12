@@ -84,8 +84,9 @@ export const config = {
       port: 4723,
       path: '/wd/hub',
       platform: platform === 'ios' ? 'iOS' : 'Android',
-      // iOS: app commented out until signed IPA available
+      // App path for installation
       ...(platform === 'android' ? { app: process.env.ANDROID_APP! } : {}),
+      ...(platform === 'ios' && process.env.IOS_APP ? { app: process.env.IOS_APP } : {}),
       restart: false,
       desiredCapabilities: platform === 'ios' ? getIOSCapabilities() : getAndroidCapabilities()
     },
